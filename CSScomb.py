@@ -18,6 +18,9 @@ class CssCombCommand(sublime_plugin.TextCommand):
         if not syntax:
             return
 
+        previous_selection = [(region.a, region.b) for region in self.view.sel()]
+        previous_position = self.view.viewport_position()
+
         config_path = self.get_setting('custom_config_path')
         if not config_path and self.view.file_name() != None:
             config_path = self.get_config_path()
@@ -26,16 +29,22 @@ class CssCombCommand(sublime_plugin.TextCommand):
             region = sublime.Region(0, self.view.size())
             originalBuffer = self.view.substr(region)
             combed = self.comb(originalBuffer, syntax, config_path)
-            if combed:
+            if combed != originalBuffer:
                 self.view.replace(edit, region, combed)
-            return
-        for region in self.view.sel():
-            if region.empty():
-                continue
-            originalBuffer = self.view.substr(region)
-            combed = self.comb(originalBuffer, syntax, config_path)
-            if combed:
-                self.view.replace(edit, region, combed)
+        else:
+            for region in self.view.sel():
+                if region.empty():
+                    continue
+                originalBuffer = self.view.substr(region)
+                combed = self.comb(originalBuffer, syntax, config_path)
+                if combed != originalBuffer:
+                    self.view.replace(edit, region, combed)
+
+        self.view.set_viewport_position((0, 0,), False)
+        self.view.set_viewport_position(previous_position, False)
+        self.view.sel().clear()
+        for a, b in previous_selection:
+            self.view.sel().add(sublime.Region(a, b))
 
     def comb(self, css, syntax, config_path):
         try:
